@@ -6,6 +6,8 @@ import "./styles.css";
 import styled from "@emotion/styled";
 import { initial, reducer } from "./reducer";
 import { Item, EmptyItem } from "./types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 type BoardPositionType = {
   x: number;
@@ -118,8 +120,19 @@ export const Board = () => {
         </>
       );
     } else {
-      return "empty";
+      return "";
     }
+  };
+
+  const handleOnClickTrash = (rowIndex: number, columnIndex: number) => {
+    setBoardRows((prevState) => {
+      const newState = [...prevState];
+      newState[rowIndex][columnIndex] = {
+        uniqueId: uuidv4(),
+        itemType: "empty",
+      };
+      return newState;
+    });
   };
 
   return (
@@ -140,6 +153,13 @@ export const Board = () => {
                 >
                   {createItemTitle(item)}
                 </Item>
+                {item.itemType !== "empty" && (
+                  <Trash
+                    onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Trash>
+                )}
               </ItemContainer>
             ))}
           </BoardRow>
@@ -191,4 +211,17 @@ const ItemLevel = styled.div`
   position: absolute;
   top: 4px;
   left: 4px;
+`;
+
+const Trash = styled.div`
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  > svg {
+    cursor: pointer;
+  }
 `;
