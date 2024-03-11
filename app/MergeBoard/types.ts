@@ -1,4 +1,5 @@
 export interface Item {
+  uniqueId: string;
   chainId: string;
   createdAt: string;
   isInsideBubble: boolean;
@@ -7,6 +8,11 @@ export interface Item {
   itemType: string;
   pausedUntil: string | null;
   visibility: string;
+}
+
+export interface EmptyItem {
+  uniqueId: string;
+  itemType: string;
 }
 
 export type BoardData = {
