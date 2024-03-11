@@ -111,7 +111,12 @@ export const Board = () => {
 
   const createItemTitle = (item: Item | EmptyItem) => {
     if (item.itemId) {
-      return item.uniqueId.slice(0, 4);
+      return (
+        <>
+          <ItemTitle>{item.itemId}</ItemTitle>
+          <ItemLevel>{item.itemLevel}</ItemLevel>
+        </>
+      );
     } else {
       return "empty";
     }
@@ -164,14 +169,26 @@ const BoardRow = styled(motion.div)`
 `;
 
 const ItemContainer = styled.div`
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   border: 1px solid #ccc;
-  height: 96px;
-  width: 96px;
+  height: 96px; // drag and drop targeting needs to use same!
+  width: 96px; // drag and drop targeting needs to use same!
 `;
 
 const Item = styled(motion.div)`
   padding: 4px;
+`;
+
+const ItemTitle = styled.div`
+  font-size: 1em;
+`;
+
+const ItemLevel = styled.div`
+  font-size: 0.8em;
+  position: absolute;
+  top: 4px;
+  left: 4px;
 `;
