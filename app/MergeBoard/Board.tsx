@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
@@ -7,7 +7,8 @@ import styled from "@emotion/styled";
 import { initial, reducer } from "./reducer";
 import { Item, EmptyItem } from "./types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import { Modal } from "./Modal/Modal";
 
 type BoardPositionType = {
   x: number;
@@ -33,6 +34,7 @@ export const Board = () => {
   const isLegalMoveRef = useRef(false);
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
   useEffect(() => {
     const perChunk = state.width; // items per chunk
@@ -120,7 +122,14 @@ export const Board = () => {
         </>
       );
     } else {
-      return "";
+      return (
+        <FontAwesomeIcon
+          icon={faPlusCircle}
+          size="lg"
+          color="green"
+          onClick={() => setIsAddItemModalOpen(true)}
+        />
+      );
     }
   };
 
@@ -157,7 +166,7 @@ export const Board = () => {
                   <Trash
                     onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
                   >
-                    <FontAwesomeIcon icon={faTrash} />
+                    <FontAwesomeIcon icon={faTrash} color="darkred" />
                   </Trash>
                 )}
               </ItemContainer>
@@ -165,6 +174,13 @@ export const Board = () => {
           </BoardRow>
         ))}
       </BoardContainer>
+      <AnimatePresence initial={false} mode="wait">
+        {isAddItemModalOpen && (
+          <Modal handleClose={() => setIsAddItemModalOpen(false)}>
+            <p>TEST</p>
+          </Modal>
+        )}
+      </AnimatePresence>
     </Container>
   );
 };
