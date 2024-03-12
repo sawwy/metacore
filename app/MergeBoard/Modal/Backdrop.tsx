@@ -22,4 +22,7 @@ const BackdropContainer = styled(motion.div)`
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;

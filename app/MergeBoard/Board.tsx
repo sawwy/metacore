@@ -23,6 +23,11 @@ type DraggedItemStateType = {
   item: Item | EmptyItem;
 } | null;
 
+type SelectedCellType = {
+  rowIndex: number;
+  columnIndex: number;
+};
+
 export const Board = () => {
   const [state] = useReducer(reducer, initial);
   const [boardRows, setBoardRows] = useState<BoardRowsType>([[]]);
@@ -35,6 +40,9 @@ export const Board = () => {
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<SelectedCellType | null>(
+    null
+  );
 
   useEffect(() => {
     const perChunk = state.width; // items per chunk
@@ -115,7 +123,25 @@ export const Board = () => {
     isLegalMoveRef.current = false;
   };
 
-  const createItemTitle = (item: Item | EmptyItem) => {
+  const handleOnClickAddItem = (
+    item: Item,
+    rowIndex: number,
+    columnIndex: number
+  ) => {
+    setBoardRows((prevState) => {
+      const newState = [...prevState];
+      newState[rowIndex][columnIndex] = item;
+
+      return newState;
+    });
+    setIsAddItemModalOpen(false);
+  };
+
+  const createItemContent = (
+    item: Item | EmptyItem,
+    rowIndex: number,
+    columnIndex: number
+  ) => {
     if (item.itemId) {
       return (
         <>
@@ -129,7 +155,10 @@ export const Board = () => {
           icon={faPlusCircle}
           size="lg"
           color="green"
-          onClick={() => setIsAddItemModalOpen(true)}
+          onClick={() => {
+            setIsAddItemModalOpen(true);
+            setSelectedCell({ rowIndex, columnIndex });
+          }}
         />
       );
     }
@@ -163,7 +192,7 @@ export const Board = () => {
                   onDragEnd={handleDragEnd}
                   drag={item.itemType === "empty" ? false : true}
                 >
-                  {createItemTitle(item)}
+                  {createItemContent(item, rowIndex, columnIndex)}
                   {item.itemType !== "empty" && (
                     <Trash
                       onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
@@ -180,7 +209,28 @@ export const Board = () => {
       <AnimatePresence initial={false} mode="wait">
         {isAddItemModalOpen && (
           <Modal handleClose={() => setIsAddItemModalOpen(false)}>
-            <p>TEST</p>
+            {state.addedItems.map((item) => {
+              return (
+                <AddItemContainer
+                  key={item.uniqueId}
+                  onClick={() =>
+                    selectedCell &&
+                    handleOnClickAddItem(
+                      item,
+                      selectedCell.rowIndex,
+                      selectedCell.columnIndex
+                    )
+                  }
+                >
+                  {selectedCell &&
+                    createItemContent(
+                      item,
+                      selectedCell?.rowIndex,
+                      selectedCell?.columnIndex
+                    )}
+                </AddItemContainer>
+              );
+            })}
           </Modal>
         )}
       </AnimatePresence>
@@ -215,6 +265,16 @@ const ItemContainer = styled.div`
   border: 1px solid #ccc;
   height: 96px; // drag and drop targeting needs to use same!
   width: 96px; // drag and drop targeting needs to use same!
+`;
+
+const AddItemContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #ccc;
+  height: 96px;
+  width: 96px;
+  cursor: pointer;
 `;
 
 const Item = styled(motion.div)`

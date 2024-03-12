@@ -20,4 +20,5 @@ export interface BoardData {
   height: number;
   boardId: string;
   items: Array<Item | null>;
+  addedItems: Array<Item>;
 }
