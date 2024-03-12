@@ -5,22 +5,24 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
 import styled from "@emotion/styled";
 import { initial, reducer } from "./reducer";
-import { Item, EmptyItem } from "./types";
+import { Item } from "./types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal/Modal";
+import { getImageURL } from "~/utils/image-utils";
+import { Visibility } from "./enums";
 
 type BoardPositionType = {
   x: number;
   y: number;
 };
 
-type BoardRowsType = Array<Array<Item | EmptyItem>>;
+type BoardRowsType = Array<Array<Item | null>>;
 
 type DraggedItemStateType = {
   originalRowIndex: number;
   originalColumnIndex: number;
-  item: Item | EmptyItem;
+  item: Item | null;
 } | null;
 
 type SelectedCellType = {
@@ -42,7 +44,7 @@ export const Board = () => {
     x: 0,
     y: 0,
   });
-  const containerRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLElement | undefined>();
   const isLegalMoveRef = useRef(false);
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
@@ -67,10 +69,7 @@ export const Board = () => {
         if (item) {
           resultArray[chunkIndex].push({ ...item, uniqueId: uuidv4() });
         } else {
-          resultArray[chunkIndex].push({
-            uniqueId: uuidv4(),
-            itemType: "empty",
-          });
+          resultArray[chunkIndex].push(null);
         }
 
         return resultArray;
@@ -119,7 +118,7 @@ export const Board = () => {
       state.width - 1
     );
 
-    if (boardRows[cursorRowIndex][cursorColumnIndex].itemType === "empty") {
+    if (!boardRows[cursorRowIndex][cursorColumnIndex]) {
       isLegalMoveRef.current = true;
     } else {
       isLegalMoveRef.current = false;
@@ -136,7 +135,7 @@ export const Board = () => {
         newState[cursorRowIndex][cursorColumnIndex] = draggedItemState.item;
         newState[draggedItemState.originalRowIndex][
           draggedItemState.originalColumnIndex
-        ] = { uniqueId: uuidv4(), itemType: "empty" };
+        ] = null;
         return newState;
       });
     }
@@ -161,11 +160,11 @@ export const Board = () => {
   };
 
   const createItemContent = (
-    item: Item | EmptyItem,
+    item: Item | null,
     rowIndex: number,
     columnIndex: number
   ) => {
-    if (item.itemId) {
+    if (item?.itemId) {
       return (
         <>
           <ItemTitle>{item.itemId}</ItemTitle>
@@ -190,10 +189,7 @@ export const Board = () => {
   const handleOnClickTrash = (rowIndex: number, columnIndex: number) => {
     setBoardRows((prevState) => {
       const newState = [...prevState];
-      newState[rowIndex][columnIndex] = {
-        uniqueId: uuidv4(),
-        itemType: "empty",
-      };
+      newState[rowIndex][columnIndex] = null;
       return newState;
     });
   };
@@ -203,29 +199,46 @@ export const Board = () => {
       <BoardContainer ref={containerRef}>
         {boardRows.map((row, rowIndex) => (
           <BoardRow key={rowIndex}>
-            {row.map((item, columnIndex) => (
-              <ItemContainer key={`${rowIndex}-${columnIndex}`}>
-                <Item
-                  initial={{ zIndex: 1 }}
-                  whileTap={{ zIndex: 100 }}
-                  key={item.uniqueId}
-                  dragSnapToOrigin={!isLegalMoveRef.current}
-                  onDragStart={handleOnDragStart}
-                  onDrag={handleOnDrag}
-                  onDragEnd={handleDragEnd}
-                  drag={item.itemType === "empty" ? false : true}
-                >
-                  {createItemContent(item, rowIndex, columnIndex)}
-                  {item.itemType !== "empty" && (
-                    <Trash
-                      onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
-                    >
-                      <FontAwesomeIcon icon={faTrash} color="darkred" />
-                    </Trash>
-                  )}
-                </Item>
-              </ItemContainer>
-            ))}
+            {row.map((item, columnIndex) => {
+              return item ? (
+                <ItemContainer key={`${rowIndex}-${columnIndex}`}>
+                  <Item
+                    initial={{ zIndex: 1 }}
+                    whileTap={{ zIndex: 100 }}
+                    key={item.uniqueId}
+                    dragSnapToOrigin={!isLegalMoveRef.current}
+                    onDragStart={handleOnDragStart}
+                    onDrag={handleOnDrag}
+                    onDragEnd={handleDragEnd}
+                    drag={item.itemType === "empty" ? false : true}
+                    visibility={item.visibility}
+                    isInsideBubble={item.isInsideBubble}
+                  >
+                    {createItemContent(item, rowIndex, columnIndex)}
+                    {item.itemType !== "empty" && (
+                      <Trash
+                        onClick={() =>
+                          handleOnClickTrash(rowIndex, columnIndex)
+                        }
+                      >
+                        <FontAwesomeIcon icon={faTrash} color="darkred" />
+                      </Trash>
+                    )}
+                  </Item>
+                </ItemContainer>
+              ) : (
+                <ItemContainer key={`${rowIndex}-${columnIndex}`}>
+                  <Item
+                    key={uuidv4()}
+                    initial={{ zIndex: 1 }}
+                    visibility={Visibility.VISIBLE}
+                    isInsideBubble={false}
+                  >
+                    {createItemContent(item, rowIndex, columnIndex)}
+                  </Item>
+                </ItemContainer>
+              );
+            })}
           </BoardRow>
         ))}
       </BoardContainer>
@@ -245,12 +258,10 @@ export const Board = () => {
                     )
                   }
                 >
-                  {selectedCell &&
-                    createItemContent(
-                      item,
-                      selectedCell?.rowIndex,
-                      selectedCell?.columnIndex
-                    )}
+                  <img
+                    alt={item.chainId}
+                    src={getImageURL(`${item.itemType}.webp`)}
+                  ></img>
                 </AddItemContainer>
               );
             })}
@@ -300,7 +311,10 @@ const AddItemContainer = styled.div`
   cursor: pointer;
 `;
 
-const Item = styled(motion.div)`
+const Item = styled(motion.div)<{
+  visibility?: string;
+  isInsideBubble?: boolean;
+}>`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,7 +322,13 @@ const Item = styled(motion.div)`
   width: 94px;
   height: 94px;
   padding: 4px;
-  background-color: white;
+  filter: ${({ visibility }) =>
+    visibility === Visibility.VISIBLE ? "blur(0);" : "blur(0.5rem);"};
+  background-color: ${({ isInsideBubble }) =>
+    isInsideBubble ? "grey;" : "white;"};
+  ${({ visibility, isInsideBubble }) =>
+    (isInsideBubble || visibility === Visibility.HIDDEN) &&
+    "pointer-events: none;"}
 `;
 
 const ItemTitle = styled.div`

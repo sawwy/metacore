@@ -1,5 +1,4 @@
-export interface Item {
-  uniqueId: string;
+export interface ItemResponse {
   chainId: string;
   createdAt: string;
   isInsideBubble: boolean;
@@ -10,15 +9,14 @@ export interface Item {
   visibility: string;
 }
 
-export interface EmptyItem {
+export interface Item extends ItemResponse {
   uniqueId: string;
-  itemType: string;
 }
 
 export interface BoardData {
   width: number;
   height: number;
   boardId: string;
-  items: Array<Item | null>;
+  items: Array<ItemResponse | null>;
   addedItems: Array<Item>;
 }
