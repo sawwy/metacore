@@ -15,9 +15,9 @@ export interface EmptyItem {
   itemType: string;
 }
 
-export type BoardData = {
+export interface BoardData {
   width: number;
   height: number;
   boardId: string;
   items: Array<Item | null>;
-};
+}

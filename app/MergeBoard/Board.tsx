@@ -110,6 +110,8 @@ export const Board = () => {
       });
     }
 
+    setDraggedItemState(null);
+
     isLegalMoveRef.current = false;
   };
 
@@ -152,23 +154,24 @@ export const Board = () => {
             {row.map((item, columnIndex) => (
               <ItemContainer key={`${rowIndex}-${columnIndex}`}>
                 <Item
+                  initial={{ zIndex: 1 }}
+                  whileTap={{ zIndex: 100 }}
                   key={item.uniqueId}
                   dragSnapToOrigin={!isLegalMoveRef.current}
                   onDragStart={handleOnDragStart}
                   onDrag={handleOnDrag}
                   onDragEnd={handleDragEnd}
-                  initial={false}
-                  drag
+                  drag={item.itemType === "empty" ? false : true}
                 >
                   {createItemTitle(item)}
+                  {item.itemType !== "empty" && (
+                    <Trash
+                      onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
+                    >
+                      <FontAwesomeIcon icon={faTrash} color="darkred" />
+                    </Trash>
+                  )}
                 </Item>
-                {item.itemType !== "empty" && (
-                  <Trash
-                    onClick={() => handleOnClickTrash(rowIndex, columnIndex)}
-                  >
-                    <FontAwesomeIcon icon={faTrash} color="darkred" />
-                  </Trash>
-                )}
               </ItemContainer>
             ))}
           </BoardRow>
@@ -215,7 +218,14 @@ const ItemContainer = styled.div`
 `;
 
 const Item = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 94px;
+  height: 94px;
   padding: 4px;
+  background-color: white;
 `;
 
 const ItemTitle = styled.div`
