@@ -28,6 +28,13 @@ type SelectedCellType = {
   columnIndex: number;
 };
 
+type DragConstraintsType = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 export const Board = () => {
   const [state] = useReducer(reducer, initial);
   const [boardRows, setBoardRows] = useState<BoardRowsType>([[]]);
@@ -39,6 +46,8 @@ export const Board = () => {
   const isLegalMoveRef = useRef(false);
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
+  const [dragConstraints, setDragConstraints] =
+    useState<DragConstraintsType | null>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<SelectedCellType | null>(
     null
@@ -90,11 +99,25 @@ export const Board = () => {
       originalRowIndex: cursorRowIndex,
       item: boardRows[cursorRowIndex][cursorColumnIndex],
     });
+
+    setDragConstraints({
+      top: boardPosition.y,
+      right: boardPosition.x + boardWidthInPixels,
+      bottom: boardPosition.y + boardHeightInPixels,
+      left: boardPosition.x,
+    });
   };
 
   const handleOnDrag = (event, info) => {
-    const cursorRowIndex = Math.floor((info.point.y - boardPosition.y) / 96);
-    const cursorColumnIndex = Math.floor((info.point.x - boardPosition.x) / 96);
+    const cursorRowIndex = Math.min(
+      Math.max(Math.floor((info.point.y - boardPosition.y) / 96), 0),
+      state.height - 1
+    );
+
+    const cursorColumnIndex = Math.min(
+      Math.max(Math.floor((info.point.x - boardPosition.x) / 96), 0),
+      state.width - 1
+    );
 
     if (boardRows[cursorRowIndex][cursorColumnIndex].itemType === "empty") {
       isLegalMoveRef.current = true;
