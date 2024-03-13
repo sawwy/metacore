@@ -12,11 +12,6 @@ import { Modal } from "./Modal/Modal";
 import { getImageURL } from "~/utils/image-utils";
 import { Visibility } from "./enums";
 
-type BoardPositionType = {
-  x: number;
-  y: number;
-};
-
 type BoardRowsType = Array<Array<Item | null>>;
 
 type DraggedItemStateType = {
@@ -37,19 +32,18 @@ type DragConstraintsType = {
   left: number;
 };
 
+// The code is currently coupled with the exact square side lengths
+// Update square side in Item style as well
+const LENGTH_OF_SQUARE_SIDE = 96;
+
 export const Board = () => {
   const [state] = useReducer(reducer, initial);
   const [boardRows, setBoardRows] = useState<BoardRowsType>([[]]);
-  const [boardPosition, setBoardPosition] = useState<BoardPositionType>({
-    x: 0,
-    y: 0,
-  });
-  const containerRef = useRef<HTMLElement | undefined>();
+  const [boardPosition, setBoardPosition] = useState<DOMRect>({} as DOMRect);
+  const containerRef = useRef<HTMLElement>(null);
   const isLegalMoveRef = useRef(false);
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
-  const [dragConstraints, setDragConstraints] =
-    useState<DragConstraintsType | null>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<SelectedCellType | null>(
     null
@@ -82,43 +76,52 @@ export const Board = () => {
 
   useEffect(() => {
     if (containerRef.current) {
-      const { x, y } = containerRef.current.getBoundingClientRect();
-      setBoardPosition({ x, y });
+      const rects = containerRef.current.getBoundingClientRect();
+      setBoardPosition(rects);
     }
   }, [boardRows.length]);
 
-  const boardWidthInPixels = state.width * 96;
-  const boardHeightInPixels = state.height * 96;
+  const boardWidthInPixels = state.width * LENGTH_OF_SQUARE_SIDE;
+  const boardHeightInPixels = state.height * LENGTH_OF_SQUARE_SIDE;
 
   const handleOnDragStart = (event, info) => {
-    const cursorRowIndex = Math.floor((info.point.y - boardPosition.y) / 96);
-    const cursorColumnIndex = Math.floor((info.point.x - boardPosition.x) / 96);
+    const cursorRowIndex = Math.floor(
+      (info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE
+    );
+    const cursorColumnIndex = Math.floor(
+      (info.point.x - boardPosition.x) / LENGTH_OF_SQUARE_SIDE
+    );
     setDraggedItemState({
       originalColumnIndex: cursorColumnIndex,
       originalRowIndex: cursorRowIndex,
       item: boardRows[cursorRowIndex][cursorColumnIndex],
     });
-
-    setDragConstraints({
-      top: boardPosition.y,
-      right: boardPosition.x + boardWidthInPixels,
-      bottom: boardPosition.y + boardHeightInPixels,
-      left: boardPosition.x,
-    });
   };
 
   const handleOnDrag = (event, info) => {
     const cursorRowIndex = Math.min(
-      Math.max(Math.floor((info.point.y - boardPosition.y) / 96), 0),
+      Math.max(
+        Math.floor((info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE),
+        0
+      ),
       state.height - 1
     );
 
     const cursorColumnIndex = Math.min(
-      Math.max(Math.floor((info.point.x - boardPosition.x) / 96), 0),
+      Math.max(
+        Math.floor((info.point.x - boardPosition.x) / LENGTH_OF_SQUARE_SIDE),
+        0
+      ),
       state.width - 1
     );
 
-    if (!boardRows[cursorRowIndex][cursorColumnIndex]) {
+    if (
+      !boardRows[cursorRowIndex][cursorColumnIndex] &&
+      info.point.x > boardPosition.left &&
+      info.point.x < boardPosition.right &&
+      info.point.y > boardPosition.top &&
+      info.point.y < boardPosition.bottom
+    ) {
       isLegalMoveRef.current = true;
     } else {
       isLegalMoveRef.current = false;
@@ -126,8 +129,12 @@ export const Board = () => {
   };
 
   const handleDragEnd = (event, info) => {
-    const cursorRowIndex = Math.floor((info.point.y - boardPosition.y) / 96);
-    const cursorColumnIndex = Math.floor((info.point.x - boardPosition.x) / 96);
+    const cursorRowIndex = Math.floor(
+      (info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE
+    );
+    const cursorColumnIndex = Math.floor(
+      (info.point.x - boardPosition.x) / LENGTH_OF_SQUARE_SIDE
+    );
 
     if (isLegalMoveRef.current && draggedItemState) {
       setBoardRows((prevState) => {
@@ -140,9 +147,11 @@ export const Board = () => {
       });
     }
 
-    setDraggedItemState(null);
-
     isLegalMoveRef.current = false;
+  };
+
+  const handleOnDragTransitionEnd = () => {
+    setDraggedItemState(null);
   };
 
   const handleOnClickAddItem = (
@@ -203,19 +212,21 @@ export const Board = () => {
               return item ? (
                 <ItemContainer key={`${rowIndex}-${columnIndex}`}>
                   <Item
+                    key={item.uniqueId}
                     initial={{ zIndex: 1 }}
                     whileTap={{ zIndex: 100 }}
-                    key={item.uniqueId}
                     dragSnapToOrigin={!isLegalMoveRef.current}
                     onDragStart={handleOnDragStart}
                     onDrag={handleOnDrag}
                     onDragEnd={handleDragEnd}
-                    drag={item.itemType === "empty" ? false : true}
+                    onDragTransitionEnd={handleOnDragTransitionEnd}
+                    drag={item ? true : false}
                     visibility={item.visibility}
                     isInsideBubble={item.isInsideBubble}
+                    dragConstraints={containerRef}
                   >
                     {createItemContent(item, rowIndex, columnIndex)}
-                    {item.itemType !== "empty" && (
+                    {item && (
                       <Trash
                         onClick={() =>
                           handleOnClickTrash(rowIndex, columnIndex)
