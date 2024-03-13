@@ -1,16 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
 import { AnimatePresence, motion } from "framer-motion";
-
 import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
 import styled from "@emotion/styled";
 import { initial, reducer } from "./reducer";
-import { Item } from "./types";
+import { EditItemType, Item, SelectedCellType } from "./types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faTrash,
+  faPlusCircle,
+  faHammer,
+} from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal/Modal";
 import { getImageURL } from "~/utils/image-utils";
 import { Visibility } from "./enums";
+import { EditItem } from "./EditItem";
 
 type BoardRowsType = Array<Array<Item | null>>;
 
@@ -19,18 +23,6 @@ type DraggedItemStateType = {
   originalColumnIndex: number;
   item: Item | null;
 } | null;
-
-type SelectedCellType = {
-  rowIndex: number;
-  columnIndex: number;
-};
-
-type DragConstraintsType = {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-};
 
 // The code is currently coupled with the exact square side lengths
 // Update square side in Item style as well
@@ -48,16 +40,17 @@ export const Board = () => {
   const [selectedCell, setSelectedCell] = useState<SelectedCellType | null>(
     null
   );
+  const [editItemState, setEditItemState] = useState<EditItemType>();
 
   useEffect(() => {
-    const perChunk = state.width; // items per chunk
+    const itemsPerChunk = state.width;
 
     const boardRows = state.items.reduce(
       (resultArray: BoardRowsType, item, index) => {
-        const chunkIndex = Math.floor(index / perChunk);
+        const chunkIndex = Math.floor(index / itemsPerChunk);
 
         if (!resultArray[chunkIndex]) {
-          resultArray[chunkIndex] = []; // start a new chunk
+          resultArray[chunkIndex] = [];
         }
 
         if (item) {
@@ -80,9 +73,6 @@ export const Board = () => {
       setBoardPosition(rects);
     }
   }, [boardRows.length]);
-
-  const boardWidthInPixels = state.width * LENGTH_OF_SQUARE_SIDE;
-  const boardHeightInPixels = state.height * LENGTH_OF_SQUARE_SIDE;
 
   const handleOnDragStart = (event, info) => {
     const cursorRowIndex = Math.floor(
@@ -150,10 +140,6 @@ export const Board = () => {
     isLegalMoveRef.current = false;
   };
 
-  const handleOnDragTransitionEnd = () => {
-    setDraggedItemState(null);
-  };
-
   const handleOnClickAddItem = (
     item: Item,
     rowIndex: number,
@@ -195,12 +181,37 @@ export const Board = () => {
     }
   };
 
-  const handleOnClickTrash = (rowIndex: number, columnIndex: number) => {
+  const handleOnDeleteItem = (rowIndex: number, columnIndex: number) => {
     setBoardRows((prevState) => {
       const newState = [...prevState];
       newState[rowIndex][columnIndex] = null;
       return newState;
     });
+  };
+
+  const handleOnEditItem = (
+    item: Item,
+    rowIndex: number,
+    columnIndex: number
+  ) => {
+    setEditItemState({ item, rowIndex, columnIndex });
+  };
+
+  const handleOnSaveEditItem = (
+    item: Item,
+    rowIndex: number,
+    columnIndex: number
+  ) => {
+    setBoardRows((prevState) => {
+      const newState = [...prevState];
+      newState[rowIndex][columnIndex] = item;
+      return newState;
+    });
+    setEditItemState(undefined);
+  };
+
+  const handleOnCancelEditItem = () => {
+    setEditItemState(undefined);
   };
 
   return (
@@ -219,7 +230,6 @@ export const Board = () => {
                     onDragStart={handleOnDragStart}
                     onDrag={handleOnDrag}
                     onDragEnd={handleDragEnd}
-                    onDragTransitionEnd={handleOnDragTransitionEnd}
                     drag={item ? true : false}
                     visibility={item.visibility}
                     isInsideBubble={item.isInsideBubble}
@@ -227,13 +237,22 @@ export const Board = () => {
                   >
                     {createItemContent(item, rowIndex, columnIndex)}
                     {item && (
-                      <Trash
-                        onClick={() =>
-                          handleOnClickTrash(rowIndex, columnIndex)
-                        }
-                      >
-                        <FontAwesomeIcon icon={faTrash} color="darkred" />
-                      </Trash>
+                      <ActionBar>
+                        <Edit
+                          onClick={() =>
+                            handleOnEditItem(item, rowIndex, columnIndex)
+                          }
+                        >
+                          <FontAwesomeIcon icon={faHammer} color="darkred" />
+                        </Edit>
+                        <Trash
+                          onClick={() =>
+                            handleOnDeleteItem(rowIndex, columnIndex)
+                          }
+                        >
+                          <FontAwesomeIcon icon={faTrash} color="darkred" />
+                        </Trash>
+                      </ActionBar>
                     )}
                   </Item>
                 </ItemContainer>
@@ -253,6 +272,7 @@ export const Board = () => {
           </BoardRow>
         ))}
       </BoardContainer>
+
       <AnimatePresence initial={false} mode="wait">
         {isAddItemModalOpen && (
           <Modal handleClose={() => setIsAddItemModalOpen(false)}>
@@ -278,6 +298,15 @@ export const Board = () => {
             })}
           </Modal>
         )}
+        {!!editItemState && (
+          <Modal handleClose={() => setEditItemState(undefined)}>
+            <EditItem
+              editItem={editItemState}
+              onSave={handleOnSaveEditItem}
+              onCancel={handleOnCancelEditItem}
+            />
+          </Modal>
+        )}
       </AnimatePresence>
     </Container>
   );
@@ -300,6 +329,15 @@ const BoardContainer = styled.div`
 const BoardRow = styled(motion.div)`
   display: flex;
   flex-direction: row;
+`;
+
+const ActionBar = styled.div`
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 `;
 
 const ItemContainer = styled.div`
@@ -354,9 +392,16 @@ const ItemLevel = styled.div`
 `;
 
 const Trash = styled.div`
-  position: absolute;
-  bottom: 0;
-  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  > svg {
+    cursor: pointer;
+  }
+`;
+
+const Edit = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;

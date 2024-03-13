@@ -20,3 +20,12 @@ export interface BoardData {
   items: Array<ItemResponse | null>;
   addedItems: Array<Item>;
 }
+
+export type SelectedCellType = {
+  rowIndex: number;
+  columnIndex: number;
+};
+
+export type EditItemType = {
+  item: Item;
+} & SelectedCellType;
