@@ -1,11 +1,11 @@
 import styled from "@emotion/styled";
 import { getImageURL } from "~/utils/image-utils";
 import { motion } from "framer-motion";
-import { Item } from "~/MergeBoard/types";
+import { ItemType } from "~/MergeBoard/types";
 
 type AddItemPropsType = {
   onClickItem: () => void;
-  item: Item;
+  item: ItemType;
 };
 
 export const AddItem = ({ onClickItem, item }: AddItemPropsType) => {

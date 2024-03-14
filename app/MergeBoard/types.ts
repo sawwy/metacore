@@ -1,4 +1,4 @@
-export interface ItemResponse {
+export interface ItemResponseType {
   chainId: string;
   createdAt: string;
   isInsideBubble: boolean;
@@ -9,16 +9,16 @@ export interface ItemResponse {
   visibility: string;
 }
 
-export interface Item extends ItemResponse {
+export interface ItemType extends ItemResponseType {
   uniqueId: string;
 }
 
-export interface BoardData {
+export interface BoardDataType {
   width: number;
   height: number;
   boardId: string;
-  items: Array<ItemResponse | null>;
-  addedItems: Array<Item>;
+  items: Array<ItemResponseType | null>;
+  addedItems: Array<ItemType>;
 }
 
 export type SelectedCellType = {
@@ -27,5 +27,13 @@ export type SelectedCellType = {
 };
 
 export type EditItemType = {
-  item: Item;
+  item: ItemType;
 } & SelectedCellType;
+
+export type BoardRowsType = Array<Array<ItemType | null>>;
+
+export type DraggedItemStateType = {
+  originalRowIndex: number;
+  originalColumnIndex: number;
+  item: ItemType | null;
+} | null;

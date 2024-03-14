@@ -5,9 +5,9 @@ type Entries<T> = {
 }[keyof T][];
 
 import { useState } from "react";
-import { EditItemType, Item } from "./types";
+import { EditItemType, ItemType } from "../MergeBoard/types";
 import styled from "@emotion/styled";
-import { Switch } from "~/components/Switch/Switch";
+import { Switch } from "~/components/Switch";
 
 type EditItemPropsType = {
   editItem: EditItemType;
@@ -16,9 +16,9 @@ type EditItemPropsType = {
 };
 
 export const EditItem = ({ editItem, onCancel, onSave }: EditItemPropsType) => {
-  const [editItemDraft, setEditItemDraft] = useState<Item>(editItem.item);
+  const [editItemDraft, setEditItemDraft] = useState<ItemType>(editItem.item);
 
-  const handleChange = <K extends keyof Item>(
+  const handleChange = <K extends keyof ItemType>(
     event: React.ChangeEvent<HTMLInputElement>,
     key: K
   ) => {

@@ -1,28 +1,26 @@
 import { v4 as uuidv4 } from "uuid";
-import { AnimatePresence, PanInfo, motion } from "framer-motion";
+import { PanInfo, motion } from "framer-motion";
 import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
 import styled from "@emotion/styled";
 import { initial, reducer } from "./reducer";
-import { EditItemType, Item, SelectedCellType } from "./types";
+import {
+  BoardRowsType,
+  DraggedItemStateType,
+  EditItemType,
+  ItemType,
+  SelectedCellType,
+} from "./types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash,
   faPlusCircle,
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
-import { Modal } from "./Modal/Modal";
+import { Modal } from "../components/Modal/Modal";
 import { Visibility } from "./enums";
-import { EditItem } from "./EditItem";
-import { AddItem } from "~/components/AddItem/AddItem";
-
-type BoardRowsType = Array<Array<Item | null>>;
-
-type DraggedItemStateType = {
-  originalRowIndex: number;
-  originalColumnIndex: number;
-  item: Item | null;
-} | null;
+import { EditItem } from "../components/EditItem";
+import { AddItem } from "~/components/AddItem";
 
 // The code is currently coupled with the exact square side lengths
 // Update square side in Item style as well
@@ -150,7 +148,7 @@ export const Board = () => {
   };
 
   const handleOnClickAddItem = (
-    item: Item,
+    item: ItemType,
     rowIndex: number,
     columnIndex: number
   ) => {
@@ -164,11 +162,11 @@ export const Board = () => {
   };
 
   const createItemContent = (
-    item: Item | null,
+    item: ItemType | null,
     rowIndex: number,
     columnIndex: number
   ) => {
-    if (item?.itemId) {
+    if (item) {
       return (
         <>
           <ItemTitle visibility={item.visibility}>{item.itemId}</ItemTitle>
@@ -199,7 +197,7 @@ export const Board = () => {
   };
 
   const handleOnEditItem = (
-    item: Item,
+    item: ItemType,
     rowIndex: number,
     columnIndex: number
   ) => {
@@ -207,7 +205,6 @@ export const Board = () => {
   };
 
   const handleOnSaveEditItem = (editItem: EditItemType) => {
-    console.log("saving edit item");
     setBoardRows((prevState) => {
       const newState = [...prevState];
       newState[editItem.rowIndex][editItem.columnIndex] = editItem.item;
@@ -220,7 +217,7 @@ export const Board = () => {
     setEditItemState(undefined);
   };
 
-  const checkIfDraggable = (item: Item) => {
+  const checkIfDraggable = (item: ItemType) => {
     if (item) {
       if (item.visibility === Visibility.HIDDEN) {
         return false;
@@ -278,7 +275,6 @@ export const Board = () => {
                   <Item
                     key={uuidv4()}
                     initial={{ zIndex: 1 }}
-                    visibility={Visibility.VISIBLE}
                     isInsideBubble={false}
                   >
                     {createItemContent(item, rowIndex, columnIndex)}
@@ -290,48 +286,46 @@ export const Board = () => {
         ))}
       </BoardContainer>
 
-      <AnimatePresence initial={false} mode="wait">
-        {isAddItemModalOpen && (
-          <Modal>
-            <ItemGroupTitle>Broom Cabinet</ItemGroupTitle>
-            <AddItemContainer>
-              {state.addedItems.map((item) => {
-                return (
-                  <AddItem
-                    key={item.uniqueId}
-                    item={item}
-                    onClickItem={() =>
-                      selectedCell &&
-                      handleOnClickAddItem(
-                        item,
-                        selectedCell.rowIndex,
-                        selectedCell.columnIndex
-                      )
-                    }
-                  />
-                );
-              })}
-            </AddItemContainer>
-            <ButtonRow>
-              <CancelButton
-                onClick={() => setIsAddItemModalOpen(false)}
-                whileHover={{ opacity: 0.5, transition: { duration: 0.15 } }}
-              >
-                Cancel
-              </CancelButton>
-            </ButtonRow>
-          </Modal>
-        )}
-        {!!editItemState && (
-          <Modal>
-            <EditItem
-              editItem={editItemState}
-              onCancel={handleOnCancelEditItem}
-              onSave={handleOnSaveEditItem}
-            />
-          </Modal>
-        )}
-      </AnimatePresence>
+      {isAddItemModalOpen && (
+        <Modal>
+          <span>Broom Cabinet</span>
+          <AddItemContainer>
+            {state.addedItems.map((item) => {
+              return (
+                <AddItem
+                  key={item.uniqueId}
+                  item={item}
+                  onClickItem={() =>
+                    selectedCell &&
+                    handleOnClickAddItem(
+                      item,
+                      selectedCell.rowIndex,
+                      selectedCell.columnIndex
+                    )
+                  }
+                />
+              );
+            })}
+          </AddItemContainer>
+          <ButtonRow>
+            <CancelButton
+              onClick={() => setIsAddItemModalOpen(false)}
+              whileHover={{ opacity: 0.5, transition: { duration: 0.15 } }}
+            >
+              Cancel
+            </CancelButton>
+          </ButtonRow>
+        </Modal>
+      )}
+      {!!editItemState && (
+        <Modal>
+          <EditItem
+            editItem={editItemState}
+            onCancel={handleOnCancelEditItem}
+            onSave={handleOnSaveEditItem}
+          />
+        </Modal>
+      )}
     </Container>
   );
 };
@@ -444,5 +438,3 @@ const CancelButton = styled(motion.div)`
   cursor: pointer;
   color: darkblue;
 `;
-
-const ItemGroupTitle = styled.div``;
