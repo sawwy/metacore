@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Backdrop } from "./Backdrop";
 import styled from "@emotion/styled";
+import { ReactNode } from "react";
 
 const dropIn = {
   hidden: {
@@ -20,9 +21,13 @@ const dropIn = {
   },
 };
 
-export const Modal = ({ handleClose, children }) => {
+type ModalPropsType = {
+  children: ReactNode;
+};
+
+export const Modal = ({ children }: ModalPropsType) => {
   return (
-    <Backdrop onClick={handleClose}>
+    <Backdrop>
       <ModalContainer
         onClick={(e) => e.stopPropagation()}
         variants={dropIn}
@@ -31,7 +36,6 @@ export const Modal = ({ handleClose, children }) => {
         exit="exit"
       >
         <Content>{children}</Content>
-        <button onClick={handleClose}>Close</button>
       </ModalContainer>
     </Backdrop>
   );
@@ -39,7 +43,6 @@ export const Modal = ({ handleClose, children }) => {
 
 const ModalContainer = styled(motion.div)`
   display: flex;
-  flex-direction: column;
   gap: 1rem;
   padding: 1rem;
   align-items: center;
@@ -52,4 +55,5 @@ const Content = styled(motion.div)`
   align-items: center;
   justify-content: center;
   background-color: white;
+  flex-direction: column;
 `;

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, PanInfo, motion } from "framer-motion";
 import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
 import styled from "@emotion/styled";
@@ -12,9 +12,9 @@ import {
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal/Modal";
-import { getImageURL } from "~/utils/image-utils";
 import { Visibility } from "./enums";
 import { EditItem } from "./EditItem";
+import { AddItem } from "~/components/AddItem/AddItem";
 
 type BoardRowsType = Array<Array<Item | null>>;
 
@@ -32,7 +32,7 @@ export const Board = () => {
   const [state] = useReducer(reducer, initial);
   const [boardRows, setBoardRows] = useState<BoardRowsType>([[]]);
   const [boardPosition, setBoardPosition] = useState<DOMRect>({} as DOMRect);
-  const containerRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isLegalMoveRef = useRef(false);
   const [draggedItemState, setDraggedItemState] =
     useState<DraggedItemStateType>(null);
@@ -74,7 +74,10 @@ export const Board = () => {
     }
   }, [boardRows.length]);
 
-  const handleOnDragStart = (event, info) => {
+  const handleOnDragStart = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     const cursorRowIndex = Math.floor(
       (info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE
     );
@@ -88,7 +91,10 @@ export const Board = () => {
     });
   };
 
-  const handleOnDrag = (event, info) => {
+  const handleOnDrag = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     const cursorRowIndex = Math.min(
       Math.max(
         Math.floor((info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE),
@@ -118,7 +124,10 @@ export const Board = () => {
     }
   };
 
-  const handleDragEnd = (event, info) => {
+  const handleDragEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     const cursorRowIndex = Math.floor(
       (info.point.y - boardPosition.y) / LENGTH_OF_SQUARE_SIDE
     );
@@ -162,8 +171,8 @@ export const Board = () => {
     if (item?.itemId) {
       return (
         <>
-          <ItemTitle>{item.itemId}</ItemTitle>
-          <ItemLevel>{item.itemLevel}</ItemLevel>
+          <ItemTitle visibility={item.visibility}>{item.itemId}</ItemTitle>
+          <ItemLevel visibility={item.visibility}>{item.itemLevel}</ItemLevel>
         </>
       );
     } else {
@@ -197,14 +206,11 @@ export const Board = () => {
     setEditItemState({ item, rowIndex, columnIndex });
   };
 
-  const handleOnSaveEditItem = (
-    item: Item,
-    rowIndex: number,
-    columnIndex: number
-  ) => {
+  const handleOnSaveEditItem = (editItem: EditItemType) => {
+    console.log("saving edit item");
     setBoardRows((prevState) => {
       const newState = [...prevState];
-      newState[rowIndex][columnIndex] = item;
+      newState[editItem.rowIndex][editItem.columnIndex] = editItem.item;
       return newState;
     });
     setEditItemState(undefined);
@@ -212,6 +218,18 @@ export const Board = () => {
 
   const handleOnCancelEditItem = () => {
     setEditItemState(undefined);
+  };
+
+  const checkIfDraggable = (item: Item) => {
+    if (item) {
+      if (item.visibility === Visibility.HIDDEN) {
+        return false;
+      } else if (item.isInsideBubble) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   return (
@@ -230,8 +248,7 @@ export const Board = () => {
                     onDragStart={handleOnDragStart}
                     onDrag={handleOnDrag}
                     onDragEnd={handleDragEnd}
-                    drag={item ? true : false}
-                    visibility={item.visibility}
+                    drag={checkIfDraggable(item)}
                     isInsideBubble={item.isInsideBubble}
                     dragConstraints={containerRef}
                   >
@@ -275,35 +292,42 @@ export const Board = () => {
 
       <AnimatePresence initial={false} mode="wait">
         {isAddItemModalOpen && (
-          <Modal handleClose={() => setIsAddItemModalOpen(false)}>
-            {state.addedItems.map((item) => {
-              return (
-                <AddItemContainer
-                  key={item.uniqueId}
-                  onClick={() =>
-                    selectedCell &&
-                    handleOnClickAddItem(
-                      item,
-                      selectedCell.rowIndex,
-                      selectedCell.columnIndex
-                    )
-                  }
-                >
-                  <img
-                    alt={item.chainId}
-                    src={getImageURL(`${item.itemType}.webp`)}
-                  ></img>
-                </AddItemContainer>
-              );
-            })}
+          <Modal>
+            <ItemGroupTitle>Broom Cabinet</ItemGroupTitle>
+            <AddItemContainer>
+              {state.addedItems.map((item) => {
+                return (
+                  <AddItem
+                    key={item.uniqueId}
+                    item={item}
+                    onClickItem={() =>
+                      selectedCell &&
+                      handleOnClickAddItem(
+                        item,
+                        selectedCell.rowIndex,
+                        selectedCell.columnIndex
+                      )
+                    }
+                  />
+                );
+              })}
+            </AddItemContainer>
+            <ButtonRow>
+              <CancelButton
+                onClick={() => setIsAddItemModalOpen(false)}
+                whileHover={{ opacity: 0.5, transition: { duration: 0.15 } }}
+              >
+                Cancel
+              </CancelButton>
+            </ButtonRow>
           </Modal>
         )}
         {!!editItemState && (
-          <Modal handleClose={() => setEditItemState(undefined)}>
+          <Modal>
             <EditItem
               editItem={editItemState}
-              onSave={handleOnSaveEditItem}
               onCancel={handleOnCancelEditItem}
+              onSave={handleOnSaveEditItem}
             />
           </Modal>
         )}
@@ -340,6 +364,12 @@ const ActionBar = styled.div`
   justify-content: space-between;
 `;
 
+const AddItemContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+`;
+
 const ItemContainer = styled.div`
   position: relative;
   display: flex;
@@ -350,18 +380,7 @@ const ItemContainer = styled.div`
   width: 96px; // drag and drop targeting needs to use same!
 `;
 
-const AddItemContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: 1px solid #ccc;
-  height: 96px;
-  width: 96px;
-  cursor: pointer;
-`;
-
 const Item = styled(motion.div)<{
-  visibility?: string;
   isInsideBubble?: boolean;
 }>`
   display: flex;
@@ -371,24 +390,25 @@ const Item = styled(motion.div)<{
   width: 94px;
   height: 94px;
   padding: 4px;
+  background-color: ${({ isInsideBubble }) =>
+    isInsideBubble ? "lightgrey;" : "white;"};
+`;
+
+const ItemTitle = styled.div<{ visibility?: string }>`
+  font-size: 1em;
+  user-select: none;
   filter: ${({ visibility }) =>
     visibility === Visibility.VISIBLE ? "blur(0);" : "blur(0.5rem);"};
-  background-color: ${({ isInsideBubble }) =>
-    isInsideBubble ? "grey;" : "white;"};
-  ${({ visibility, isInsideBubble }) =>
-    (isInsideBubble || visibility === Visibility.HIDDEN) &&
-    "pointer-events: none;"}
 `;
 
-const ItemTitle = styled.div`
-  font-size: 1em;
-`;
-
-const ItemLevel = styled.div`
+const ItemLevel = styled.div<{ visibility?: string }>`
   font-size: 0.8em;
   position: absolute;
   top: 4px;
   left: 4px;
+  user-select: none;
+  filter: ${({ visibility }) =>
+    visibility === Visibility.VISIBLE ? "blur(0);" : "blur(0.5rem);"};
 `;
 
 const Trash = styled.div`
@@ -410,3 +430,19 @@ const Edit = styled.div`
     cursor: pointer;
   }
 `;
+
+const ButtonRow = styled.div`
+  display: grid;
+  grid-auto-flow: column;
+  margin-top: 2rem;
+  width: 100%;
+`;
+
+const CancelButton = styled(motion.div)`
+  justify-self: flex-start;
+  align-self: center;
+  cursor: pointer;
+  color: darkblue;
+`;
+
+const ItemGroupTitle = styled.div``;

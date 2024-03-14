@@ -1,54 +1,75 @@
-// "itemId": 1177,
-// "itemType": "BroomCabinet_08",
-// "chainId": "BroomCabinet",
-// "pausedUntil": null,
-// "createdAt": "2023-05-29T17:10:06.9080000Z",
-// "visibility": "hidden",
-// "itemLevel": 8,
-// "isInsideBubble": false
+import { motion } from "framer-motion";
 
-import { SyntheticEvent, useState } from "react";
+type Entries<T> = {
+  [K in keyof T]: [K, T[K]];
+}[keyof T][];
+
+import { useState } from "react";
 import { EditItemType, Item } from "./types";
 import styled from "@emotion/styled";
+import { Switch } from "~/components/Switch/Switch";
 
 type EditItemPropsType = {
   editItem: EditItemType;
-  onSave: (item: Item, rowIndex: number, columnIndex: number) => void;
   onCancel: () => void;
+  onSave: (editItem: EditItemType) => void;
 };
 
-export const EditItem = ({ editItem, onSave, onCancel }: EditItemPropsType) => {
-  const [itemDraft, setItemDraft] = useState<Item>(editItem.item);
+export const EditItem = ({ editItem, onCancel, onSave }: EditItemPropsType) => {
+  const [editItemDraft, setEditItemDraft] = useState<Item>(editItem.item);
 
-  const handleChange = (event, key) => {
-    console.log("event", event.target.value);
-    setItemDraft((prevItem) => {
-      const newItem = { ...prevItem };
-      newItem[key] = event.target.value;
-      return newItem;
+  const handleChange = <K extends keyof Item>(
+    event: React.ChangeEvent<HTMLInputElement>,
+    key: K
+  ) => {
+    setEditItemDraft((prevEditItem) => {
+      return {
+        ...prevEditItem,
+        [key]: event.target.value,
+      };
     });
   };
 
-  console.log("itemDraft", itemDraft);
+  const handleToggleSwitch = () => {
+    setEditItemDraft((prevEditItem) => {
+      const newEditItem = { ...prevEditItem };
+      newEditItem["isInsideBubble"] = !newEditItem["isInsideBubble"];
+
+      return newEditItem;
+    });
+  };
 
   return (
     <EditContainer>
       <Fields>
-        {Object.entries(itemDraft)
+        {(Object.entries(editItemDraft) as Entries<typeof editItemDraft>)
           .filter(([key]) => {
-            return key !== "uniqueId";
+            return !["uniqueId", "isInsideBubble"].includes(key);
           })
           .map(([key, value], i) => (
-            <Field
-              key={i}
-              value={value ?? ""}
-              onChange={(event) => handleChange(event, key)}
-            />
+            <Row key={i}>
+              <Label>{key}:</Label>
+              <Field
+                value={value ?? ""}
+                onChange={(event) => handleChange(event, key)}
+              />
+            </Row>
           ))}
+        <Row>
+          <Label>isInsideBubble:</Label>
+          <Switch
+            isOn={editItemDraft.isInsideBubble}
+            onClick={handleToggleSwitch}
+          />
+        </Row>
       </Fields>
       <ButtonRow>
-        <Button></Button>
-        <Button></Button>
+        <CancelButton onClick={onCancel}>Cancel</CancelButton>
+        <SaveButton
+          onClick={() => onSave({ ...editItem, item: editItemDraft })}
+        >
+          Save
+        </SaveButton>
       </ButtonRow>
     </EditContainer>
   );
@@ -58,24 +79,51 @@ const EditContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  width: 400px;
 `;
 
 const Fields = styled.div`
+  display: grid;
+  grid-gap: 0.5rem;
+  width: 100%;
+`;
+
+const Row = styled.div`
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+`;
+
+const Label = styled.div`
+  display: flex;
+  margin-right: 1rem;
 `;
 
 const Field = styled.input`
   display: flex;
   flex-direction: column;
+  width: 65%;
 `;
 
 const ButtonRow = styled.div`
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-auto-flow: column;
+  margin-top: 2rem;
+  width: 100%;
 `;
 
-const Button = styled.div`
-  display: flex;
-  flex-direction: row;
+const CancelButton = styled(motion.div)`
+  justify-self: flex-start;
+  align-self: center;
+  cursor: pointer;
+  color: darkblue;
+`;
+
+const SaveButton = styled(motion.div)`
+  justify-self: flex-end;
+  background-color: green;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
 `;

@@ -1,10 +1,14 @@
 import { motion } from "framer-motion";
 import styled from "@emotion/styled";
+import { ReactNode } from "react";
 
-export const Backdrop = ({ children, onClick }) => {
+type BackdropType = {
+  children: ReactNode;
+};
+
+export const Backdrop = ({ children }: BackdropType) => {
   return (
     <BackdropContainer
-      onClick={onClick}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -16,6 +20,7 @@ export const Backdrop = ({ children, onClick }) => {
 
 const BackdropContainer = styled(motion.div)`
   position: fixed;
+  backdrop: static;
   top: 0;
   left: 0;
   width: 100%;
