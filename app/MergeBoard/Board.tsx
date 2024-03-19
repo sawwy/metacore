@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { PanInfo, motion } from "framer-motion";
+import { PanInfo, delay, motion } from "framer-motion";
 import { useEffect, useReducer, useRef, useState } from "react";
 import "./styles.css";
 import styled from "@emotion/styled";
@@ -142,6 +142,8 @@ export const Board = () => {
         ] = null;
         return newState;
       });
+
+      setDraggedItemState(null);
     }
 
     isLegalMoveRef.current = false;
@@ -229,6 +231,14 @@ export const Board = () => {
     return true;
   };
 
+  const variants = {
+    idle: {
+      zIndex: 1,
+      transition: { delay: 5 },
+    },
+    dragging: { zIndex: 100 },
+  };
+
   return (
     <Container>
       <BoardContainer ref={containerRef}>
@@ -238,9 +248,11 @@ export const Board = () => {
               return item ? (
                 <ItemContainer key={`${rowIndex}-${columnIndex}`}>
                   <Item
+                    initial={false}
+                    animate="idle"
+                    whileDrag="dragging"
+                    variants={variants}
                     key={item.uniqueId}
-                    initial={{ zIndex: 1 }}
-                    whileTap={{ zIndex: 100 }}
                     dragSnapToOrigin={!isLegalMoveRef.current}
                     onDragStart={handleOnDragStart}
                     onDrag={handleOnDrag}
